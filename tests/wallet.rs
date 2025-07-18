@@ -36,14 +36,14 @@ impl TestEnvironment {
         let guard = ENV_MUTEX.lock().unwrap();
         let original_path = env::var("PATH").unwrap_or_default();
         env::set_var("PATH", setup_mock_path());
-        
+
         Self {
             _guard: guard,
             original_path,
             env_vars_to_remove: Vec::new(),
         }
     }
-    
+
     fn set_var(&mut self, key: &str, value: &str) {
         env::set_var(key, value);
         self.env_vars_to_remove.push(key.to_string());
@@ -54,7 +54,7 @@ impl Drop for TestEnvironment {
     fn drop(&mut self) {
         // Restore original PATH
         env::set_var("PATH", &self.original_path);
-        
+
         // Remove any environment variables we set
         for var in &self.env_vars_to_remove {
             env::remove_var(var);
@@ -65,12 +65,10 @@ impl Drop for TestEnvironment {
 #[test]
 fn test_mock_green_cli_balance_success() {
     let _env = TestEnvironment::new();
-    
+
     // Test that our mock green-cli returns correct JSON for balance
     let mut cmd = Command::new("green-cli");
-    cmd.arg("get")
-        .arg("balance")
-        .arg("--json");
+    cmd.arg("get").arg("balance").arg("--json");
 
     cmd.assert()
         .success()
@@ -86,12 +84,10 @@ fn test_mock_green_cli_balance_success() {
 fn test_mock_green_cli_balance_empty() {
     let mut env = TestEnvironment::new();
     env.set_var("MOCK_EMPTY_BALANCE", "1");
-    
+
     // Test empty balance scenario
     let mut cmd = Command::new("green-cli");
-    cmd.arg("get")
-        .arg("balance")
-        .arg("--json");
+    cmd.arg("get").arg("balance").arg("--json");
 
     cmd.assert()
         .success()
@@ -102,12 +98,10 @@ fn test_mock_green_cli_balance_empty() {
 fn test_mock_green_cli_invalid_json() {
     let mut env = TestEnvironment::new();
     env.set_var("MOCK_INVALID_JSON", "1");
-    
+
     // Test invalid JSON response
     let mut cmd = Command::new("green-cli");
-    cmd.arg("get")
-        .arg("balance")
-        .arg("--json");
+    cmd.arg("get").arg("balance").arg("--json");
 
     cmd.assert()
         .success()
@@ -117,12 +111,10 @@ fn test_mock_green_cli_invalid_json() {
 #[test]
 fn test_mock_green_cli_fee_estimates() {
     let _env = TestEnvironment::new();
-    
+
     // Test fee estimates
     let mut cmd = Command::new("green-cli");
-    cmd.arg("get")
-        .arg("fee-estimates")
-        .arg("--json");
+    cmd.arg("get").arg("fee-estimates").arg("--json");
 
     cmd.assert()
         .success()
@@ -136,12 +128,10 @@ fn test_mock_green_cli_fee_estimates() {
 fn test_mock_green_cli_error() {
     let mut env = TestEnvironment::new();
     env.set_var("MOCK_FAIL", "Wallet not initialized");
-    
+
     // Test CLI error scenario
     let mut cmd = Command::new("green-cli");
-    cmd.arg("get")
-        .arg("balance")
-        .arg("--json");
+    cmd.arg("get").arg("balance").arg("--json");
 
     cmd.assert()
         .failure()
