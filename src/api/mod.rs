@@ -9,3 +9,4 @@ pub mod wallet;
 
 // Re-export commonly used traits
 pub use wallet::{AsyncWalletExt, WalletExt};
+pub use transaction::{TransactionApi, AsyncTransactionApi, TxBuilder};

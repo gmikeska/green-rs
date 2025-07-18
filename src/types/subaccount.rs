@@ -78,11 +78,38 @@ pub struct CreateSubaccountRequest {
     pub recovery_xpub: Option<String>,
 }
 
+/// Create subaccount parameters
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CreateSubaccountParams {
+    /// Subaccount name
+    pub name: String,
+    /// Subaccount type
+    #[serde(rename = "type")]
+    pub subaccount_type: String,
+    /// Recovery mnemonic (for 2of3)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub recovery_mnemonic: Option<String>,
+    /// Recovery xpub (for 2of3)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub recovery_xpub: Option<String>,
+}
+
 /// Update subaccount request
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct UpdateSubaccountRequest {
     /// Subaccount pointer
     pub subaccount: Pointer,
+    /// New name
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    /// Hidden status
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub hidden: Option<bool>,
+}
+
+/// Update subaccount parameters
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct UpdateSubaccountParams {
     /// New name
     #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,

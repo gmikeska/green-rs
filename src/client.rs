@@ -1,7 +1,12 @@
 //! Green API client implementations
 
+use crate::api::subaccount::SubaccountExt;
 use crate::api::wallet::{AsyncWalletExt, WalletExt};
 use crate::error::{Error, Result};
+use crate::types::common::Pointer;
+use crate::types::subaccount::{
+    CreateSubaccountParams, Subaccount, SubaccountList, UpdateSubaccountParams,
+};
 use crate::types::{Balance, FeeEstimates};
 use std::process::Command;
 use tokio::process::Command as TokioCommand;
@@ -34,6 +39,12 @@ impl GreenClient {
     }
 }
 
+impl Default for GreenClient {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl WalletExt for GreenClient {
     fn get_balance(&self) -> Result<Balance> {
         let output = self.run_command(&["get", "balance", "--json"])?;
@@ -45,6 +56,165 @@ impl WalletExt for GreenClient {
         let output = self.run_command(&["get", "fee-estimates", "--json"])?;
         let fee_estimates: FeeEstimates = serde_json::from_str(&output)?;
         Ok(fee_estimates)
+    }
+}
+
+impl crate::api::utxo::UtxoApi for GreenClient {
+    fn get_unspent_outputs(
+        &self,
+        params: crate::types::GetUnspentOutputsParams,
+    ) -> crate::Result<std::collections::HashMap<crate::types::AssetId, Vec<crate::types::UnspentOutput>>> {
+        let params_json = serde_json::to_string(&params)?;
+        let output = self.run_command(&[
+            "get",
+            "utxos",
+            "--params",
+            &params_json,
+            "--json",
+        ])?;
+        let utxos: Vec<crate::types::UnspentOutput> = serde_json::from_str(&output)?;
+        let mut grouped_utxos: std::collections::HashMap<crate::types::AssetId, Vec<crate::types::UnspentOutput>> = std::collections::HashMap::new();
+
+        // Group UTXOs by asset ID
+        // For Bitcoin mainnet, asset_id is None, so we use "btc" as the default key
+        for utxo in utxos {
+            let asset_id = utxo.asset_id.clone().unwrap_or_else(|| "btc".to_string());
+            grouped_utxos.entry(asset_id).or_insert_with(Vec::new).push(utxo);
+        }
+        
+        // Apply sorting if specified
+        if let Some(sort_by) = params.sort_by {
+            for utxos in grouped_utxos.values_mut() {
+                match sort_by {
+                    crate::types::UtxoSortBy::Value => {
+                        utxos.sort_by_key(|u| u.satoshi);
+                    }
+                    crate::types::UtxoSortBy::ValueDesc => {
+                        utxos.sort_by_key(|u| std::cmp::Reverse(u.satoshi));
+                    }
+                    crate::types::UtxoSortBy::Confirmations => {
+                        utxos.sort_by_key(|u| u.confirmations);
+                    }
+                    crate::types::UtxoSortBy::ConfirmationsDesc => {
+                        utxos.sort_by_key(|u| std::cmp::Reverse(u.confirmations));
+                    }
+                    crate::types::UtxoSortBy::Age => {
+                        utxos.sort_by_key(|u| u.block_height);
+                    }
+                    crate::types::UtxoSortBy::AgeDesc => {
+                        utxos.sort_by_key(|u| std::cmp::Reverse(u.block_height));
+                    }
+                }
+            }
+        }
+        
+        Ok(grouped_utxos)
+    }
+}
+
+#[async_trait::async_trait]
+impl crate::api::utxo::AsyncUtxoApi for AsyncGreenClient {
+    async fn get_unspent_outputs(
+        &self,
+        params: crate::types::GetUnspentOutputsParams,
+    ) -> crate::Result<std::collections::HashMap<crate::types::AssetId, Vec<crate::types::UnspentOutput>>> {
+        let params_json = serde_json::to_string(&params)?;
+        let output = self.run_command(&[
+            "get",
+            "utxos",
+            "--params",
+            &params_json,
+            "--json",
+        ]).await?;
+        let utxos: Vec<crate::types::UnspentOutput> = serde_json::from_str(&output)?;
+        let mut grouped_utxos: std::collections::HashMap<crate::types::AssetId, Vec<crate::types::UnspentOutput>> = std::collections::HashMap::new();
+
+        // Group UTXOs by asset ID
+        // For Bitcoin mainnet, asset_id is None, so we use "btc" as the default key
+        for utxo in utxos {
+            let asset_id = utxo.asset_id.clone().unwrap_or_else(|| "btc".to_string());
+            grouped_utxos.entry(asset_id).or_insert_with(Vec::new).push(utxo);
+        }
+        
+        // Apply sorting if specified
+        if let Some(sort_by) = params.sort_by {
+            for utxos in grouped_utxos.values_mut() {
+                match sort_by {
+                    crate::types::UtxoSortBy::Value => {
+                        utxos.sort_by_key(|u| u.satoshi);
+                    }
+                    crate::types::UtxoSortBy::ValueDesc => {
+                        utxos.sort_by_key(|u| std::cmp::Reverse(u.satoshi));
+                    }
+                    crate::types::UtxoSortBy::Confirmations => {
+                        utxos.sort_by_key(|u| u.confirmations);
+                    }
+                    crate::types::UtxoSortBy::ConfirmationsDesc => {
+                        utxos.sort_by_key(|u| std::cmp::Reverse(u.confirmations));
+                    }
+                    crate::types::UtxoSortBy::Age => {
+                        utxos.sort_by_key(|u| u.block_height);
+                    }
+                    crate::types::UtxoSortBy::AgeDesc => {
+                        utxos.sort_by_key(|u| std::cmp::Reverse(u.block_height));
+                    }
+                }
+            }
+        }
+        
+        Ok(grouped_utxos)
+    }
+}
+
+impl SubaccountExt for GreenClient {
+    fn get_subaccounts(&self) -> Result<Vec<Subaccount>> {
+        let output = self.run_command(&["get", "subaccounts", "--json"])?;
+        let list: SubaccountList = serde_json::from_str(&output)?;
+        Ok(list.subaccounts)
+    }
+
+    fn get_subaccount(&self, pointer: Pointer) -> Result<Subaccount> {
+        let output = self.run_command(&[
+            "get",
+            "subaccount",
+            "--subaccount",
+            &pointer.to_string(),
+            "--json",
+        ])?;
+        let subaccount: Subaccount = serde_json::from_str(&output)?;
+        Ok(subaccount)
+    }
+
+    fn create_subaccount(&self, params: CreateSubaccountParams) -> Result<Subaccount> {
+        let params_json = serde_json::to_string(&params)?;
+        let output = self.run_command(&[
+            "create",
+            "subaccount",
+            "--params",
+            &params_json,
+            "--json",
+        ])?;
+        let subaccount: Subaccount = serde_json::from_str(&output)?;
+        Ok(subaccount)
+    }
+
+    fn update_subaccount(
+        &self,
+        pointer: Pointer,
+        params: UpdateSubaccountParams,
+    ) -> Result<Subaccount> {
+        let params_json = serde_json::to_string(&params)?;
+        let output = self.run_command(&[
+            "update",
+            "subaccount",
+            "--subaccount",
+            &pointer.to_string(),
+            "--params",
+            &params_json,
+            "--json",
+        ])?;
+        let subaccount: Subaccount = serde_json::from_str(&output)?;
+        Ok(subaccount)
     }
 }
 
@@ -73,6 +243,12 @@ impl AsyncGreenClient {
     /// * `Err(Error::Cli)` - Error containing stderr on non-zero exit code
     pub async fn run_command(&self, args: &[&str]) -> Result<String> {
         run_cli_async(args).await
+    }
+}
+
+impl Default for AsyncGreenClient {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

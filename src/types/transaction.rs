@@ -36,7 +36,7 @@ pub struct TxInput {
 }
 
 /// Transaction output
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
 pub struct TxOutput {
     /// Amount in satoshis
     pub satoshi: Satoshis,
