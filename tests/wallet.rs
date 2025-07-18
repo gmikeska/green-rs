@@ -10,6 +10,10 @@ use std::collections::HashMap;
 use std::env;
 use std::path::PathBuf;
 use std::process::Command;
+use std::sync::Mutex;
+
+// Global mutex to ensure tests don't interfere with each other's environment
+static ENV_MUTEX: Mutex<()> = Mutex::new(());
 
 /// Helper function to set up PATH to use our mock green-cli
 fn setup_mock_path() -> String {
@@ -20,13 +24,53 @@ fn setup_mock_path() -> String {
     format!("{}:{}", fixtures_path.display(), current_path)
 }
 
+/// Test helper that sets up environment and cleans up after test
+struct TestEnvironment {
+    _guard: std::sync::MutexGuard<'static, ()>,
+    original_path: String,
+    env_vars_to_remove: Vec<String>,
+}
+
+impl TestEnvironment {
+    fn new() -> Self {
+        let guard = ENV_MUTEX.lock().unwrap();
+        let original_path = env::var("PATH").unwrap_or_default();
+        env::set_var("PATH", setup_mock_path());
+        
+        Self {
+            _guard: guard,
+            original_path,
+            env_vars_to_remove: Vec::new(),
+        }
+    }
+    
+    fn set_var(&mut self, key: &str, value: &str) {
+        env::set_var(key, value);
+        self.env_vars_to_remove.push(key.to_string());
+    }
+}
+
+impl Drop for TestEnvironment {
+    fn drop(&mut self) {
+        // Restore original PATH
+        env::set_var("PATH", &self.original_path);
+        
+        // Remove any environment variables we set
+        for var in &self.env_vars_to_remove {
+            env::remove_var(var);
+        }
+    }
+}
+
 #[test]
 fn test_mock_green_cli_balance_success() {
+    let _env = TestEnvironment::new();
+    
     // Test that our mock green-cli returns correct JSON for balance
-    let mut cmd = Command::new("bash");
-    cmd.env("PATH", setup_mock_path())
-        .arg("-c")
-        .arg("green-cli get balance --json");
+    let mut cmd = Command::new("green-cli");
+    cmd.arg("get")
+        .arg("balance")
+        .arg("--json");
 
     cmd.assert()
         .success()
@@ -40,12 +84,14 @@ fn test_mock_green_cli_balance_success() {
 
 #[test]
 fn test_mock_green_cli_balance_empty() {
+    let mut env = TestEnvironment::new();
+    env.set_var("MOCK_EMPTY_BALANCE", "1");
+    
     // Test empty balance scenario
-    let mut cmd = Command::new("bash");
-    cmd.env("PATH", setup_mock_path())
-        .env("MOCK_EMPTY_BALANCE", "1")
-        .arg("-c")
-        .arg("green-cli get balance --json");
+    let mut cmd = Command::new("green-cli");
+    cmd.arg("get")
+        .arg("balance")
+        .arg("--json");
 
     cmd.assert()
         .success()
@@ -54,12 +100,14 @@ fn test_mock_green_cli_balance_empty() {
 
 #[test]
 fn test_mock_green_cli_invalid_json() {
+    let mut env = TestEnvironment::new();
+    env.set_var("MOCK_INVALID_JSON", "1");
+    
     // Test invalid JSON response
-    let mut cmd = Command::new("bash");
-    cmd.env("PATH", setup_mock_path())
-        .env("MOCK_INVALID_JSON", "1")
-        .arg("-c")
-        .arg("green-cli get balance --json");
+    let mut cmd = Command::new("green-cli");
+    cmd.arg("get")
+        .arg("balance")
+        .arg("--json");
 
     cmd.assert()
         .success()
@@ -68,11 +116,13 @@ fn test_mock_green_cli_invalid_json() {
 
 #[test]
 fn test_mock_green_cli_fee_estimates() {
+    let _env = TestEnvironment::new();
+    
     // Test fee estimates
-    let mut cmd = Command::new("bash");
-    cmd.env("PATH", setup_mock_path())
-        .arg("-c")
-        .arg("green-cli get fee-estimates --json");
+    let mut cmd = Command::new("green-cli");
+    cmd.arg("get")
+        .arg("fee-estimates")
+        .arg("--json");
 
     cmd.assert()
         .success()
@@ -84,12 +134,14 @@ fn test_mock_green_cli_fee_estimates() {
 
 #[test]
 fn test_mock_green_cli_error() {
+    let mut env = TestEnvironment::new();
+    env.set_var("MOCK_FAIL", "Wallet not initialized");
+    
     // Test CLI error scenario
-    let mut cmd = Command::new("bash");
-    cmd.env("PATH", setup_mock_path())
-        .env("MOCK_FAIL", "Wallet not initialized")
-        .arg("-c")
-        .arg("green-cli get balance --json");
+    let mut cmd = Command::new("green-cli");
+    cmd.arg("get")
+        .arg("balance")
+        .arg("--json");
 
     cmd.assert()
         .failure()
@@ -98,15 +150,10 @@ fn test_mock_green_cli_error() {
 
 #[test]
 fn test_sync_wallet_get_balance_with_mock() {
-    // Set up environment to use mock green-cli
-    let original_path = env::var("PATH").unwrap_or_default();
-    env::set_var("PATH", setup_mock_path());
+    let _env = TestEnvironment::new();
 
     let client = GreenClient::new();
     let result = client.get_balance();
-
-    // Restore original PATH
-    env::set_var("PATH", original_path);
 
     // Verify successful deserialization
     match result {
@@ -122,17 +169,11 @@ fn test_sync_wallet_get_balance_with_mock() {
 
 #[test]
 fn test_sync_wallet_get_balance_empty_with_mock() {
-    // Set up environment to use mock green-cli with empty balance
-    let original_path = env::var("PATH").unwrap_or_default();
-    env::set_var("PATH", setup_mock_path());
-    env::set_var("MOCK_EMPTY_BALANCE", "1");
+    let mut env = TestEnvironment::new();
+    env.set_var("MOCK_EMPTY_BALANCE", "1");
 
     let client = GreenClient::new();
     let result = client.get_balance();
-
-    // Restore environment
-    env::set_var("PATH", original_path);
-    env::remove_var("MOCK_EMPTY_BALANCE");
 
     // Verify empty balance
     match result {
@@ -146,17 +187,11 @@ fn test_sync_wallet_get_balance_empty_with_mock() {
 
 #[test]
 fn test_sync_wallet_json_error_with_mock() {
-    // Set up environment to use mock green-cli with invalid JSON
-    let original_path = env::var("PATH").unwrap_or_default();
-    env::set_var("PATH", setup_mock_path());
-    env::set_var("MOCK_INVALID_JSON", "1");
+    let mut env = TestEnvironment::new();
+    env.set_var("MOCK_INVALID_JSON", "1");
 
     let client = GreenClient::new();
     let result = client.get_balance();
-
-    // Restore environment
-    env::set_var("PATH", original_path);
-    env::remove_var("MOCK_INVALID_JSON");
 
     // Verify JSON error
     match result {
@@ -170,17 +205,11 @@ fn test_sync_wallet_json_error_with_mock() {
 
 #[test]
 fn test_sync_wallet_cli_error_with_mock() {
-    // Set up environment to use mock green-cli with CLI error
-    let original_path = env::var("PATH").unwrap_or_default();
-    env::set_var("PATH", setup_mock_path());
-    env::set_var("MOCK_FAIL", "Wallet locked");
+    let mut env = TestEnvironment::new();
+    env.set_var("MOCK_FAIL", "Wallet locked");
 
     let client = GreenClient::new();
     let result = client.get_balance();
-
-    // Restore environment
-    env::set_var("PATH", original_path);
-    env::remove_var("MOCK_FAIL");
 
     // Verify CLI error
     match result {
@@ -194,15 +223,10 @@ fn test_sync_wallet_cli_error_with_mock() {
 
 #[test]
 fn test_sync_wallet_get_fee_estimates_with_mock() {
-    // Set up environment to use mock green-cli
-    let original_path = env::var("PATH").unwrap_or_default();
-    env::set_var("PATH", setup_mock_path());
+    let _env = TestEnvironment::new();
 
     let client = GreenClient::new();
     let result = client.get_fee_estimates();
-
-    // Restore original PATH
-    env::set_var("PATH", original_path);
 
     // Verify successful deserialization
     match result {
@@ -219,15 +243,10 @@ fn test_sync_wallet_get_fee_estimates_with_mock() {
 
 #[tokio::test]
 async fn test_async_wallet_get_balance_with_mock() {
-    // Set up environment to use mock green-cli
-    let original_path = env::var("PATH").unwrap_or_default();
-    env::set_var("PATH", setup_mock_path());
+    let _env = TestEnvironment::new();
 
     let client = AsyncGreenClient::new();
     let result = client.get_balance().await;
-
-    // Restore original PATH
-    env::set_var("PATH", original_path);
 
     // Verify successful deserialization
     match result {
@@ -243,15 +262,10 @@ async fn test_async_wallet_get_balance_with_mock() {
 
 #[tokio::test]
 async fn test_async_wallet_get_fee_estimates_with_mock() {
-    // Set up environment to use mock green-cli
-    let original_path = env::var("PATH").unwrap_or_default();
-    env::set_var("PATH", setup_mock_path());
+    let _env = TestEnvironment::new();
 
     let client = AsyncGreenClient::new();
     let result = client.get_fee_estimates().await;
-
-    // Restore original PATH
-    env::set_var("PATH", original_path);
 
     // Verify successful deserialization
     match result {
@@ -268,17 +282,11 @@ async fn test_async_wallet_get_fee_estimates_with_mock() {
 
 #[tokio::test]
 async fn test_async_wallet_cli_error_with_mock() {
-    // Set up environment to use mock green-cli with CLI error
-    let original_path = env::var("PATH").unwrap_or_default();
-    env::set_var("PATH", setup_mock_path());
-    env::set_var("MOCK_FAIL", "Network error");
+    let mut env = TestEnvironment::new();
+    env.set_var("MOCK_FAIL", "Network error");
 
     let client = AsyncGreenClient::new();
     let result = client.get_balance().await;
-
-    // Restore environment
-    env::set_var("PATH", original_path);
-    env::remove_var("MOCK_FAIL");
 
     // Verify CLI error
     match result {
@@ -292,17 +300,11 @@ async fn test_async_wallet_cli_error_with_mock() {
 
 #[tokio::test]
 async fn test_async_wallet_json_error_with_mock() {
-    // Set up environment to use mock green-cli with invalid JSON
-    let original_path = env::var("PATH").unwrap_or_default();
-    env::set_var("PATH", setup_mock_path());
-    env::set_var("MOCK_INVALID_JSON", "1");
+    let mut env = TestEnvironment::new();
+    env.set_var("MOCK_INVALID_JSON", "1");
 
     let client = AsyncGreenClient::new();
     let result = client.get_fee_estimates().await;
-
-    // Restore environment
-    env::set_var("PATH", original_path);
-    env::remove_var("MOCK_INVALID_JSON");
 
     // Verify JSON error
     match result {

@@ -68,7 +68,7 @@ impl Error {
 
     /// Create a new network error
     pub fn network<S: Into<String>>(msg: S) -> Self {
-        Error::Network(msg.into())
+        Self::Network(msg.into())
     }
 
     /// Create a new unexpected error

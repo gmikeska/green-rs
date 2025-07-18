@@ -50,7 +50,7 @@ use tokio::process::Command as TokioCommand;
 ///
 /// // Get wallet balance
 /// let balance = client.get_balance().expect("Failed to get balance");
-/// println!("Available balance: {} sats", balance.satoshi.get("btc").unwrap_or(&0));
+/// println!("Available balance: {} sats", balance.get("btc").unwrap_or(0));
 /// ```
 pub struct GreenClient {
     // TODO: Add client configuration fields
@@ -322,7 +322,7 @@ impl SubaccountExt for GreenClient {
 ///     
 ///     // Get wallet balance
 ///     let balance = client.get_balance().await.expect("Failed to get balance");
-///     println!("Available balance: {} sats", balance.satoshi.get("btc").unwrap_or(&0));
+///     println!("Available balance: {} sats", balance.get("btc").unwrap_or(0));
 /// }
 /// ```
 pub struct AsyncGreenClient {
@@ -348,6 +348,9 @@ impl AsyncGreenClient {
     ///
     /// * `Ok(String)` - The stdout output on successful execution
     /// * `Err(Error::Cli)` - Error containing stderr on non-zero exit code
+    /// # Errors
+    ///
+    /// Returns an error if the command execution fails.
     pub async fn run_command(&self, args: &[&str]) -> Result<String> {
         run_cli_async(args).await
     }
@@ -434,7 +437,7 @@ impl AsyncWalletExt for AsyncGreenClient {
 /// # Returns
 ///
 /// * `Ok(String)` - The stdout output on successful execution
-/// * `Err(`Error::Cli`)` - Error containing stderr on non-zero exit code
+/// * `Err(``Error::Cli``)` - Error containing stderr on non-zero exit code
 ///
 /// # Example
 ///

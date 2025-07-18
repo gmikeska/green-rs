@@ -145,6 +145,7 @@ impl TxBuilder {
 
     /// Set the fee rate
     #[must_use]
+    #[allow(clippy::missing_const_for_fn)] // Cannot be const due to Option::Some
     pub fn set_fee_rate(mut self, fee_rate: u64) -> Self {
         self.fee_rate = Some(fee_rate);
         self
@@ -152,6 +153,7 @@ impl TxBuilder {
 
     /// Set the subaccount
     #[must_use]
+    #[allow(clippy::missing_const_for_fn)] // Cannot be const due to Option::Some
     pub fn set_subaccount(mut self, subaccount: u32) -> Self {
         self.subaccount = Some(subaccount);
         self
@@ -216,17 +218,20 @@ impl TxBuilder {
     ///
     /// Returns an error if no transaction data exists or broadcasting fails
     pub fn send(self) -> Result<String> {
-        if let Some(ref path) = self.temp_file_path {
-            println!("Broadcasting transaction from file: {path}");
-            // TODO: Execute green-cli tx send command
-            // Example: green-cli tx send --file <path>
-            // Return transaction ID
-            Ok("dummy_txid".to_string())
-        } else {
-            Err(crate::Error::unexpected(
-                "No transaction data to broadcast. Call dump() and sign() first.",
-            ))
-        }
+        self.temp_file_path.as_ref().map_or_else(
+            || {
+                Err(crate::Error::unexpected(
+                    "No transaction data to broadcast. Call dump() and sign() first.",
+                ))
+            },
+            |path| {
+                println!("Broadcasting transaction from file: {path}");
+                // TODO: Execute green-cli tx send command
+                // Example: green-cli tx send --file <path>
+                // Return transaction ID
+                Ok("dummy_txid".to_string())
+            },
+        )
     }
 
     /// Alias for `send()`

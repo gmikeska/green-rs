@@ -79,7 +79,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     if let (Ok(balance), Ok(fees)) = (balance_result, fee_result) {
         println!("Concurrent operations completed successfully!");
-        println!("  Balance: {} BTC satoshis", balance.get("btc").unwrap_or(0));
+        println!(
+            "  Balance: {} BTC satoshis",
+            balance.get("btc").unwrap_or(0)
+        );
         println!(
             "  Fastest fee: {} sat/vB",
             fees.fees.get(&1).copied().unwrap_or(0)

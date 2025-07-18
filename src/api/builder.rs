@@ -70,6 +70,7 @@ impl GetReceiveAddressBuilder {
 
     /// Set the subaccount to retrieve addresses from
     #[must_use]
+    #[allow(clippy::missing_const_for_fn)] // Cannot be const due to Option::Some
     pub fn subaccount(mut self, subaccount: u32) -> Self {
         self.subaccount = Some(subaccount);
         self
@@ -132,6 +133,7 @@ impl GetPreviousAddressesBuilder {
 
     /// Set the subaccount to retrieve addresses from
     #[must_use]
+    #[allow(clippy::missing_const_for_fn)] // Cannot be const due to Option::Some
     pub fn subaccount(mut self, subaccount: u32) -> Self {
         self.subaccount = Some(subaccount);
         self
@@ -139,6 +141,7 @@ impl GetPreviousAddressesBuilder {
 
     /// Set the last pointer to retrieve addresses up to
     #[must_use]
+    #[allow(clippy::missing_const_for_fn)] // Cannot be const due to Option::Some
     pub fn last_pointer(mut self, last_pointer: Pointer) -> Self {
         self.last_pointer = Some(last_pointer);
         self
@@ -146,6 +149,7 @@ impl GetPreviousAddressesBuilder {
 
     /// Set whether to retrieve only unused addresses
     #[must_use]
+    #[allow(clippy::missing_const_for_fn)] // Cannot be const due to Option::Some
     pub fn unused_only(mut self, unused_only: bool) -> Self {
         self.unused_only = Some(unused_only);
         self
@@ -153,6 +157,7 @@ impl GetPreviousAddressesBuilder {
 
     /// Build the final request
     #[must_use]
+    #[allow(clippy::missing_const_for_fn)] // Cannot be const due to struct construction
     pub fn build(self) -> GetPreviousAddressesRequest {
         GetPreviousAddressesRequest {
             subaccount: self.subaccount,
