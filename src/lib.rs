@@ -1,14 +1,22 @@
-pub fn add(left: u64, right: u64) -> u64 {
-    left + right
-}
+//! Green API client library for Rust
+//!
+//! This library provides synchronous and asynchronous clients for interacting
+//! with the Green API.
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+// Re-export main client types
+pub use client::{AsyncGreenClient, GreenClient};
 
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
-}
+// Re-export error types
+pub use error::{Error, Result};
+
+// Re-export types module
+pub mod types;
+
+// Re-export API modules
+pub mod api;
+
+// Public modules
+pub mod client;
+
+// Internal modules
+mod error;
