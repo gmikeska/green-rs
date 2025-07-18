@@ -2,8 +2,8 @@
 
 [![Crates.io](https://img.shields.io/crates/v/green-rs.svg)](https://crates.io/crates/green-rs)
 [![Documentation](https://docs.rs/green-rs/badge.svg)](https://docs.rs/green-rs)
-[![License](https://img.shields.io/crates/l/green-rs.svg)](https://github.com/yourusername/green-rs#license)
-[![CI](https://github.com/yourusername/green-rs/workflows/CI/badge.svg)](https://github.com/yourusername/green-rs/actions)
+[![License](https://img.shields.io/crates/l/green-rs.svg)](https://github.com/gmikeska/green-rs#license)
+[![CI](https://github.com/gmikeska/green-rs/workflows/CI/badge.svg)](https://github.com/gmikeska/green-rs/actions)
 
 Green.rs is a Rust library for interacting with the Green API to handle cryptocurrency transactions. It provides a Builder pattern to facilitate transaction creation, signing, and broadcasting.
 
