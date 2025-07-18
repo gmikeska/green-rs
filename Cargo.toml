@@ -2,7 +2,7 @@
 name = "green-rs"
 version = "0.1.2"
 edition = "2021"
-description = "A Rust implementation for green computing"
+description = "A Rust implementation to interface into the Blockstream green-cli client for Bitcoin and the Liquid Network"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/gmikeska/green-rs"
 keywords = ["bitcoin", "cryptocurrency", "blockchain", "green", "api-client"]
