@@ -3,8 +3,10 @@ name = "green-rs"
 version = "0.1.0"
 edition = "2021"
 description = "A Rust implementation for green computing"
-license = "MIT"
+license = "MIT OR Apache-2.0"
 repository = "https://github.com/yourusername/green-rs"
+keywords = ["bitcoin", "cryptocurrency", "blockchain", "green", "api-client"]
+categories = ["api-bindings", "cryptography::cryptocurrencies", "asynchronous"]
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
@@ -20,3 +22,4 @@ tempfile = "3.20.0"
 [dev-dependencies]
 anyhow = "1"
 assert_cmd = "2"
+predicates = "3"

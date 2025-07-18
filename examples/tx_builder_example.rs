@@ -6,8 +6,14 @@ use green_rs::Result;
 fn main() -> Result<()> {
     // Example of using TxBuilder to create a transaction
     let tx_builder = TxBuilder::new()
-        .add_output("bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh".to_string(), 100000)
-        .add_output("bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq".to_string(), 50000)
+        .add_output(
+            "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh".to_string(),
+            100000,
+        )
+        .add_output(
+            "bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq".to_string(),
+            50000,
+        )
         .set_fee_rate(10)
         .set_subaccount(0)
         .add_input("previous_txid:0".to_string());

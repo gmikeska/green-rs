@@ -10,11 +10,13 @@ pub struct Balance(pub HashMap<AssetId, Satoshis>);
 
 impl Balance {
     /// Create a new empty balance
+    #[must_use]
     pub fn new() -> Self {
-        Balance(HashMap::new())
+        Self(HashMap::new())
     }
 
     /// Get balance for a specific asset
+    #[must_use]
     pub fn get(&self, asset_id: &str) -> Option<Satoshis> {
         self.0.get(asset_id).copied()
     }
@@ -25,11 +27,13 @@ impl Balance {
     }
 
     /// Get total number of assets
+    #[must_use]
     pub fn asset_count(&self) -> usize {
         self.0.len()
     }
 
     /// Check if balance is empty
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }

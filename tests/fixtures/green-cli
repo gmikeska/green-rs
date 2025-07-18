@@ -1,0 +1,45 @@
+#!/bin/bash
+
+# Mock green-cli script for testing
+# This script simulates different green-cli responses based on arguments
+
+# Check if MOCK_FAIL is set to simulate failure
+if [ -n "$MOCK_FAIL" ]; then
+    echo "Error: $MOCK_FAIL" >&2
+    exit 1
+fi
+
+# Check if MOCK_INVALID_JSON is set to return invalid JSON
+if [ -n "$MOCK_INVALID_JSON" ]; then
+    cat "$(dirname "$0")/invalid_json.txt"
+    exit 0
+fi
+
+# Parse arguments
+case "$1" in
+    "get")
+        case "$2" in
+            "balance")
+                if [ -n "$MOCK_EMPTY_BALANCE" ]; then
+                    cat "$(dirname "$0")/balance_empty.json"
+                else
+                    cat "$(dirname "$0")/balance_success.json"
+                fi
+                ;;
+            "fee-estimates")
+                cat "$(dirname "$0")/fee_estimates_success.json"
+                ;;
+            *)
+                echo "Unknown get command: $2" >&2
+                exit 1
+                ;;
+        esac
+        ;;
+    "--help")
+        echo "green-cli mock help"
+        ;;
+    *)
+        echo "Unknown command: $1" >&2
+        exit 1
+        ;;
+esac

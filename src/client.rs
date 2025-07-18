@@ -1,4 +1,21 @@
 //! Green API client implementations
+//!
+//! This module provides both synchronous and asynchronous clients for interacting
+//! with the Green wallet through the `green-cli` command-line interface.
+//!
+//! # Architecture
+//!
+//! The clients act as wrappers around the `green-cli` binary, serializing requests
+//! to JSON and parsing responses. This design allows the library to work with any
+//! Green wallet installation without requiring direct integration.
+//!
+//! # Liquid Network Support
+//!
+//! Both clients fully support Liquid network operations including:
+//! - Confidential transactions
+//! - Multiple asset types
+//! - Blinded amounts and asset IDs
+//! - Liquid-specific fee calculations
 
 use crate::api::subaccount::SubaccountExt;
 use crate::api::wallet::{AsyncWalletExt, WalletExt};
@@ -12,13 +29,37 @@ use std::process::Command;
 use tokio::process::Command as TokioCommand;
 
 /// Synchronous Green API client
+///
+/// Provides blocking access to Green wallet functionality through the `green-cli`
+/// command-line interface. Use this client when working in synchronous contexts
+/// or when async runtime overhead is not desired.
+///
+/// # Liquid Network Considerations
+///
+/// When using this client with Liquid:
+/// - All amounts may be blinded in confidential transactions
+/// - Asset IDs must be specified for non-L-BTC transactions
+/// - Fee estimation may vary based on transaction complexity
+///
+/// # Example
+///
+/// ```no_run
+/// use green_rs::{GreenClient, api::WalletExt};
+///
+/// let client = GreenClient::new();
+///
+/// // Get wallet balance
+/// let balance = client.get_balance().expect("Failed to get balance");
+/// println!("Available balance: {} sats", balance.satoshi.get("btc").unwrap_or(&0));
+/// ```
 pub struct GreenClient {
     // TODO: Add client configuration fields
 }
 
 impl GreenClient {
     /// Create a new synchronous Green API client
-    pub fn new() -> Self {
+    #[must_use]
+    pub const fn new() -> Self {
         Self {}
     }
 
@@ -34,6 +75,10 @@ impl GreenClient {
     ///
     /// * `Ok(String)` - The stdout output on successful execution
     /// * `Err(Error::Cli)` - Error containing stderr on non-zero exit code
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the command execution fails
     pub fn run_command(&self, args: &[&str]) -> Result<String> {
         run_cli(args)
     }
@@ -63,25 +108,24 @@ impl crate::api::utxo::UtxoApi for GreenClient {
     fn get_unspent_outputs(
         &self,
         params: crate::types::GetUnspentOutputsParams,
-    ) -> crate::Result<std::collections::HashMap<crate::types::AssetId, Vec<crate::types::UnspentOutput>>> {
+    ) -> crate::Result<
+        std::collections::HashMap<crate::types::AssetId, Vec<crate::types::UnspentOutput>>,
+    > {
         let params_json = serde_json::to_string(&params)?;
-        let output = self.run_command(&[
-            "get",
-            "utxos",
-            "--params",
-            &params_json,
-            "--json",
-        ])?;
+        let output = self.run_command(&["get", "utxos", "--params", &params_json, "--json"])?;
         let utxos: Vec<crate::types::UnspentOutput> = serde_json::from_str(&output)?;
-        let mut grouped_utxos: std::collections::HashMap<crate::types::AssetId, Vec<crate::types::UnspentOutput>> = std::collections::HashMap::new();
+        let mut grouped_utxos: std::collections::HashMap<
+            crate::types::AssetId,
+            Vec<crate::types::UnspentOutput>,
+        > = std::collections::HashMap::new();
 
         // Group UTXOs by asset ID
         // For Bitcoin mainnet, asset_id is None, so we use "btc" as the default key
         for utxo in utxos {
             let asset_id = utxo.asset_id.clone().unwrap_or_else(|| "btc".to_string());
-            grouped_utxos.entry(asset_id).or_insert_with(Vec::new).push(utxo);
+            grouped_utxos.entry(asset_id).or_default().push(utxo);
         }
-        
+
         // Apply sorting if specified
         if let Some(sort_by) = params.sort_by {
             for utxos in grouped_utxos.values_mut() {
@@ -107,7 +151,7 @@ impl crate::api::utxo::UtxoApi for GreenClient {
                 }
             }
         }
-        
+
         Ok(grouped_utxos)
     }
 }
@@ -117,25 +161,26 @@ impl crate::api::utxo::AsyncUtxoApi for AsyncGreenClient {
     async fn get_unspent_outputs(
         &self,
         params: crate::types::GetUnspentOutputsParams,
-    ) -> crate::Result<std::collections::HashMap<crate::types::AssetId, Vec<crate::types::UnspentOutput>>> {
+    ) -> crate::Result<
+        std::collections::HashMap<crate::types::AssetId, Vec<crate::types::UnspentOutput>>,
+    > {
         let params_json = serde_json::to_string(&params)?;
-        let output = self.run_command(&[
-            "get",
-            "utxos",
-            "--params",
-            &params_json,
-            "--json",
-        ]).await?;
+        let output = self
+            .run_command(&["get", "utxos", "--params", &params_json, "--json"])
+            .await?;
         let utxos: Vec<crate::types::UnspentOutput> = serde_json::from_str(&output)?;
-        let mut grouped_utxos: std::collections::HashMap<crate::types::AssetId, Vec<crate::types::UnspentOutput>> = std::collections::HashMap::new();
+        let mut grouped_utxos: std::collections::HashMap<
+            crate::types::AssetId,
+            Vec<crate::types::UnspentOutput>,
+        > = std::collections::HashMap::new();
 
         // Group UTXOs by asset ID
         // For Bitcoin mainnet, asset_id is None, so we use "btc" as the default key
         for utxo in utxos {
             let asset_id = utxo.asset_id.clone().unwrap_or_else(|| "btc".to_string());
-            grouped_utxos.entry(asset_id).or_insert_with(Vec::new).push(utxo);
+            grouped_utxos.entry(asset_id).or_default().push(utxo);
         }
-        
+
         // Apply sorting if specified
         if let Some(sort_by) = params.sort_by {
             for utxos in grouped_utxos.values_mut() {
@@ -161,8 +206,47 @@ impl crate::api::utxo::AsyncUtxoApi for AsyncGreenClient {
                 }
             }
         }
-        
+
         Ok(grouped_utxos)
+    }
+}
+
+impl crate::api::address::AddressApi for GreenClient {
+    fn get_receive_address(
+        &self,
+        request: crate::types::address::GetReceiveAddressRequest,
+    ) -> Result<crate::types::address::ReceiveAddress> {
+        let params_json = serde_json::to_string(&request)?;
+        let output = self.run_command(&["get", "address", "--params", &params_json, "--json"])?;
+        let address: crate::types::address::ReceiveAddress = serde_json::from_str(&output)?;
+        Ok(address)
+    }
+
+    fn get_new_address(
+        &self,
+        request: crate::types::address::GetReceiveAddressRequest,
+    ) -> Result<crate::types::address::ReceiveAddress> {
+        let params_json = serde_json::to_string(&request)?;
+        let output =
+            self.run_command(&["get", "new-address", "--params", &params_json, "--json"])?;
+        let address: crate::types::address::ReceiveAddress = serde_json::from_str(&output)?;
+        Ok(address)
+    }
+
+    fn get_previous_addresses(
+        &self,
+        request: crate::types::address::GetPreviousAddressesRequest,
+    ) -> Result<Vec<crate::types::address::AddressDetails>> {
+        let params_json = serde_json::to_string(&request)?;
+        let output = self.run_command(&[
+            "get",
+            "previous-addresses",
+            "--params",
+            &params_json,
+            "--json",
+        ])?;
+        let addresses: Vec<crate::types::address::AddressDetails> = serde_json::from_str(&output)?;
+        Ok(addresses)
     }
 }
 
@@ -187,13 +271,8 @@ impl SubaccountExt for GreenClient {
 
     fn create_subaccount(&self, params: CreateSubaccountParams) -> Result<Subaccount> {
         let params_json = serde_json::to_string(&params)?;
-        let output = self.run_command(&[
-            "create",
-            "subaccount",
-            "--params",
-            &params_json,
-            "--json",
-        ])?;
+        let output =
+            self.run_command(&["create", "subaccount", "--params", &params_json, "--json"])?;
         let subaccount: Subaccount = serde_json::from_str(&output)?;
         Ok(subaccount)
     }
@@ -219,13 +298,41 @@ impl SubaccountExt for GreenClient {
 }
 
 /// Asynchronous Green API client
+///
+/// Provides non-blocking access to Green wallet functionality through the `green-cli`
+/// command-line interface. Use this client when working in async contexts or when
+/// handling multiple concurrent operations.
+///
+/// # Liquid Network Considerations
+///
+/// When using this client with Liquid:
+/// - All amounts may be blinded in confidential transactions
+/// - Asset IDs must be specified for non-L-BTC transactions  
+/// - Fee estimation may vary based on transaction complexity
+/// - Confidential transactions require additional block space
+///
+/// # Example
+///
+/// ```no_run
+/// use green_rs::{AsyncGreenClient, api::AsyncWalletExt};
+///
+/// #[tokio::main]
+/// async fn main() {
+///     let client = AsyncGreenClient::new();
+///     
+///     // Get wallet balance
+///     let balance = client.get_balance().await.expect("Failed to get balance");
+///     println!("Available balance: {} sats", balance.satoshi.get("btc").unwrap_or(&0));
+/// }
+/// ```
 pub struct AsyncGreenClient {
     // TODO: Add client configuration fields
 }
 
 impl AsyncGreenClient {
     /// Create a new asynchronous Green API client
-    pub fn new() -> Self {
+    #[must_use]
+    pub const fn new() -> Self {
         Self {}
     }
 
@@ -253,6 +360,51 @@ impl Default for AsyncGreenClient {
 }
 
 #[async_trait::async_trait]
+impl crate::api::address::AsyncAddressApi for AsyncGreenClient {
+    async fn get_receive_address(
+        &self,
+        request: crate::types::address::GetReceiveAddressRequest,
+    ) -> Result<crate::types::address::ReceiveAddress> {
+        let params_json = serde_json::to_string(&request)?;
+        let output = self
+            .run_command(&["get", "address", "--params", &params_json, "--json"])
+            .await?;
+        let address: crate::types::address::ReceiveAddress = serde_json::from_str(&output)?;
+        Ok(address)
+    }
+
+    async fn get_new_address(
+        &self,
+        request: crate::types::address::GetReceiveAddressRequest,
+    ) -> Result<crate::types::address::ReceiveAddress> {
+        let params_json = serde_json::to_string(&request)?;
+        let output = self
+            .run_command(&["get", "new-address", "--params", &params_json, "--json"])
+            .await?;
+        let address: crate::types::address::ReceiveAddress = serde_json::from_str(&output)?;
+        Ok(address)
+    }
+
+    async fn get_previous_addresses(
+        &self,
+        request: crate::types::address::GetPreviousAddressesRequest,
+    ) -> Result<Vec<crate::types::address::AddressDetails>> {
+        let params_json = serde_json::to_string(&request)?;
+        let output = self
+            .run_command(&[
+                "get",
+                "previous-addresses",
+                "--params",
+                &params_json,
+                "--json",
+            ])
+            .await?;
+        let addresses: Vec<crate::types::address::AddressDetails> = serde_json::from_str(&output)?;
+        Ok(addresses)
+    }
+}
+
+#[async_trait::async_trait]
 impl AsyncWalletExt for AsyncGreenClient {
     async fn get_balance(&self) -> Result<Balance> {
         let output = self.run_command(&["get", "balance", "--json"]).await?;
@@ -273,7 +425,7 @@ impl AsyncWalletExt for AsyncGreenClient {
 ///
 /// Invokes `green-cli` with the provided arguments, setting `-L` and `-T`
 /// environment variables by default. Captures stdout/stderr and returns
-/// stdout as a String on success, or Error::Cli on failure.
+/// stdout as a String on success, or `Error::Cli` on failure.
 ///
 /// # Arguments
 ///
@@ -282,7 +434,7 @@ impl AsyncWalletExt for AsyncGreenClient {
 /// # Returns
 ///
 /// * `Ok(String)` - The stdout output on successful execution
-/// * `Err(Error::Cli)` - Error containing stderr on non-zero exit code
+/// * `Err(`Error::Cli`)` - Error containing stderr on non-zero exit code
 ///
 /// # Example
 ///
@@ -295,6 +447,11 @@ impl AsyncWalletExt for AsyncGreenClient {
 ///     Ok(())
 /// }
 /// ```
+/// Execute a command using the CLI
+///
+/// # Errors
+///
+/// Returns an error if the command execution fails.
 pub fn run_cli(args: &[&str]) -> Result<String> {
     let output = Command::new("green-cli")
         .args(args)
@@ -314,7 +471,7 @@ pub fn run_cli(args: &[&str]) -> Result<String> {
 ///
 /// Invokes `green-cli` with the provided arguments, setting `-L` and `-T`
 /// environment variables by default. Captures stdout/stderr and returns
-/// stdout as a String on success, or Error::Cli on failure.
+/// stdout as a String on success, or `Error::Cli` on failure.
 ///
 /// # Arguments
 ///
@@ -337,6 +494,11 @@ pub fn run_cli(args: &[&str]) -> Result<String> {
 ///     Ok(())
 /// }
 /// ```
+/// Asynchronously execute a command using the CLI
+///
+/// # Errors
+///
+/// Returns an error if the command execution fails.
 pub async fn run_cli_async(args: &[&str]) -> Result<String> {
     let output = TokioCommand::new("green-cli")
         .args(args)

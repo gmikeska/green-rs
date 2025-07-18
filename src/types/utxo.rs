@@ -4,7 +4,7 @@ use super::common::{Address, AssetId, BlockHeight, Satoshis, Script, TxId};
 use serde::{Deserialize, Serialize};
 
 /// UTXO details
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct UtxoDetails {
     /// Transaction hash
     pub txhash: TxId,
@@ -110,7 +110,7 @@ pub struct UtxoSummary {
 }
 
 /// Unspent output representation
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct UnspentOutput {
     /// Transaction hash
     pub txhash: TxId,
@@ -192,6 +192,13 @@ pub enum UtxoSortBy {
     Confirmations,
     /// Sort by number of confirmations (descending)
     ConfirmationsDesc,
+}
+
+/// Collection of unspent outputs
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct UnspentOutputs {
+    /// List of unspent outputs
+    pub unspent_outputs: Vec<UnspentOutput>,
 }
 
 /// Parameters for getting unspent outputs

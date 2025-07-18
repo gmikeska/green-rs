@@ -11,7 +11,7 @@ pub struct Subaccount {
     pub pointer: Pointer,
     /// Subaccount name
     pub name: String,
-    /// Subaccount type (e.g., "2of2", "2of3", "2of2_no_recovery")
+    /// Subaccount type (e.g., "2of2", "2of3", "`2of2_no_recovery`")
     #[serde(rename = "type")]
     pub subaccount_type: String,
     /// Recovery mnemonic (if applicable)

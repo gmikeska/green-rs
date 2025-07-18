@@ -96,14 +96,15 @@ fn print_utxos(utxos_by_asset: &HashMap<String, Vec<green_rs::types::UnspentOutp
     for (asset_id, utxos) in utxos_by_asset {
         println!("Asset: {}", asset_id);
         println!("Number of UTXOs: {}", utxos.len());
-        
+
         let total_value: u64 = utxos.iter().map(|u| u.satoshi).sum();
         println!("Total value: {} sats", total_value);
-        
+
         // Print first few UTXOs as examples
         for (i, utxo) in utxos.iter().take(3).enumerate() {
-            println!("  UTXO {}: {}:{} - {} sats", 
-                i + 1, 
+            println!(
+                "  UTXO {}: {}:{} - {} sats",
+                i + 1,
                 &utxo.txhash[..8], // First 8 chars of txhash
                 utxo.vout,
                 utxo.satoshi
@@ -115,7 +116,7 @@ fn print_utxos(utxos_by_asset: &HashMap<String, Vec<green_rs::types::UnspentOutp
                 println!("    Status: FROZEN");
             }
         }
-        
+
         if utxos.len() > 3 {
             println!("  ... and {} more", utxos.len() - 3);
         }

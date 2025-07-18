@@ -22,7 +22,7 @@ pub type Result<T> = std::result::Result<T, Error>;
 /// This enum covers all possible error cases that can occur during API operations.
 #[derive(Error, Debug)]
 pub enum Error {
-    /// IO error from std::io operations
+    /// IO error from `std::io` operations
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
 
@@ -63,7 +63,7 @@ impl Error {
     /// let error = Error::cli_error("Command failed: permission denied");
     /// ```
     pub fn cli_error<S: Into<String>>(stderr: S) -> Self {
-        Error::Cli(stderr.into())
+        Self::Cli(stderr.into())
     }
 
     /// Create a new network error
@@ -73,6 +73,6 @@ impl Error {
 
     /// Create a new unexpected error
     pub fn unexpected<S: Into<String>>(msg: S) -> Self {
-        Error::Unexpected(msg.into())
+        Self::Unexpected(msg.into())
     }
 }

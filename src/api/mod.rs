@@ -8,5 +8,5 @@ pub mod utxo;
 pub mod wallet;
 
 // Re-export commonly used traits
+pub use transaction::{AsyncTransactionApi, TransactionApi, TxBuilder};
 pub use wallet::{AsyncWalletExt, WalletExt};
-pub use transaction::{TransactionApi, AsyncTransactionApi, TxBuilder};
