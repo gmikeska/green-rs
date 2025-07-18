@@ -118,26 +118,6 @@ cargo run --example tx_builder
 
 For detailed API documentation, please visit [docs.rs/green-rs](https://docs.rs/green-rs).
 
-## Roadmap
-
-### Version 0.2.0 (Planned)
-- [ ] WebSocket support for real-time updates
-- [ ] Hardware wallet integration
-- [ ] Enhanced multi-signature support
-- [ ] Performance optimizations
-
-### Version 0.3.0 (Future)
-- [ ] Lightning Network support
-- [ ] Advanced fee optimization strategies
-- [ ] Batch transaction processing
-- [ ] Plugin system for extensions
-
-### Long-term Goals
-- [ ] Cross-platform CLI tool
-- [ ] Integration with popular wallet formats
-- [ ] Support for additional cryptocurrencies
-- [ ] Advanced privacy features
-
 ## Contributing
 
 We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on how to contribute to this project.
